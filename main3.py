@@ -19,9 +19,9 @@ class ImageDataset( Dataset ):
     def __init__(self, is_val= False, transform = None) -> None:
 
         if is_val:
-            self.df = pd.read_csv('validation.csv', index_col=0)
+            self.df = pd.read_csv( 'validation.csv', index_col=0 )
         else:
-            self.df = pd.read_csv('train.csv', index_col= 0)
+            self.df = pd.read_csv( 'train.csv', index_col= 0 )
 
         self.cls_names = self.df['cls_name'].unique().tolist()
         self.df['label'] = self.df['cls_name'].apply( self.cls_names.index )
@@ -150,11 +150,11 @@ if __name__ == "__main__":
 
     num_epochs = 50
     batch_size = 64
-    learning_rate = 0.0001
+    learning_rate = 0.00001
     weight_decay = 0.001
 
     transform = transforms.Compose([
-        #transforms.Normalize( (0.485, 0.456, 0.406), (0.229, 0.224, 0.225) ),
+        transforms.Normalize( (0.485, 0.456, 0.406), (0.229, 0.224, 0.225) ),
         transforms.RandomVerticalFlip(.5)
     ])
 
@@ -165,9 +165,11 @@ if __name__ == "__main__":
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
 
     model = ResNet18().to(device)
+    # Apply the xivar weight initialization
+    model.apply(init_weights)
     # Define loss function and optimizer
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
     print("======== start modeling ===========")
     for epoch in range(num_epochs):
@@ -184,6 +186,7 @@ if __name__ == "__main__":
             inputs, labels = inputs.to(device), labels.to(device)
             optimizer.zero_grad()
             outputs = model(inputs)
+
             # one-hot to class indices
             # labels = torch.argmax(labels.squeeze(), dim=1)
             # labels = labels.squeeze().long()
@@ -208,36 +211,37 @@ if __name__ == "__main__":
             optimizer.step()
             train_loss += loss.item()
             correct += (predicted == labels).sum().item()
-            avg_train_loss = train_loss / len(train_dataloader)
-            train_accuracy = correct / total
 
-            # Validation
-            model.eval()
-            val_loss = 0.0
-            avg_val_loss = 0.0
-            correct = 0
-            total = 0
+        avg_train_loss = train_loss / len(train_dataloader)
+        train_accuracy = correct / total
 
-            with torch.no_grad():
-                for inputs, labels in val_dataloader:
-                    inputs, labels = inputs.to(device), labels.to(device)
-                    # labels = torch.argmax(labels.squeeze(), dim=1)
-                    outputs = model(inputs)
-                    _, predicted = torch.max(outputs.data, 1)
-                    # predicted = outputs
-                    loss = criterion(outputs, labels)
+        # Validation
+        model.eval()
+        val_loss = 0.0
+        avg_val_loss = 0.0
+        correct = 0
+        total = 0
 
-                    labels = torch.argmax(labels.squeeze(), dim=1)
-                    val_loss += loss.item()
-                    total += labels.size(0)
-                    correct += (predicted == labels).sum().item()
+        with torch.no_grad():
+            for inputs, labels in val_dataloader:
+                inputs, labels = inputs.to(device), labels.to(device)
+                # labels = torch.argmax(labels.squeeze(), dim=1)
+                outputs = model(inputs)
+                _, predicted = torch.max(outputs.data, 1)
+                # predicted = outputs
+                loss = criterion(outputs, labels)
 
-            avg_val_loss = val_loss / len(val_dataloader)
-            val_accuracy = correct / total
-            #print(f'Training Loss: {avg_train_loss:.4f}, Validation Loss: {avg_val_loss:.4f}')
+                labels = torch.argmax(labels.squeeze(), dim=1)
+                val_loss += loss.item()
+                total += labels.size(0)
+                correct += (predicted == labels).sum().item()
+
+        avg_val_loss = val_loss / len(val_dataloader)
+        val_accuracy = correct / total
+        #print(f'Training Loss: {avg_train_loss:.4f}, Validation Loss: {avg_val_loss:.4f}')
 
         print(f'Epoch [{epoch + 1}/{num_epochs}], '
                 f'Training Loss: {avg_train_loss:.4f}, Training Accuracy: {train_accuracy:.2%}, '
                 f'Validation Loss: {avg_val_loss:.4f}, Validation Accuracy: {val_accuracy:.2%}')
 
-    torch.save(model.state_dict(), 'ResNet18_model.pth')
+    torch.save(model.state_dict(), 'ResNet18.pth')

@@ -18,9 +18,9 @@ class ImageDataset( Dataset ):
     def __init__(self, is_val= False, transform = None) -> None:
 
         if is_val:
-            self.df = pd.read_csv('validation.csv', index_col=0)
+            self.df = pd.read_csv( 'validation.csv', index_col=0 )
         else:
-            self.df = pd.read_csv('train.csv', index_col= 0)
+            self.df = pd.read_csv( 'train.csv', index_col= 0 )
 
         self.cls_names = self.df['cls_name'].unique().tolist()
         self.df['label'] = self.df['cls_name'].apply( self.cls_names.index )
@@ -176,33 +176,34 @@ if __name__ == "__main__":
             optimizer.step()
             train_loss += loss.item()
             correct += (predicted == labels).sum().item()
-            avg_train_loss = train_loss / len(train_dataloader)
-            train_accuracy = correct / total
 
-            # Validation
-            model.eval()
-            val_loss = 0.0
-            avg_val_loss = 0.0
-            correct = 0
-            total = 0
+        avg_train_loss = train_loss / len(train_dataloader)
+        train_accuracy = correct / total
 
-            with torch.no_grad():
-                for inputs, labels in val_dataloader:
-                    inputs, labels = inputs.to(device), labels.to(device)
-                    # labels = torch.argmax(labels.squeeze(), dim=1)
-                    outputs = model(inputs)
-                    _, predicted = torch.max(outputs.data, 1)
-                    # predicted = outputs
-                    loss = criterion(outputs, labels)
+        # Validation
+        model.eval()
+        val_loss = 0.0
+        avg_val_loss = 0.0
+        correct = 0
+        total = 0
 
-                    labels = torch.argmax(labels.squeeze(), dim=1)
-                    val_loss += loss.item()
-                    total += labels.size(0)
-                    correct += (predicted == labels).sum().item()
+        with torch.no_grad():
+            for inputs, labels in val_dataloader:
+                inputs, labels = inputs.to(device), labels.to(device)
+                # labels = torch.argmax(labels.squeeze(), dim=1)
+                outputs = model(inputs)
+                _, predicted = torch.max(outputs.data, 1)
+                # predicted = outputs
+                loss = criterion(outputs, labels)
 
-            avg_val_loss = val_loss / len(val_dataloader)
-            val_accuracy = correct / total
-            #print(f'Training Loss: {avg_train_loss:.4f}, Validation Loss: {avg_val_loss:.4f}')
+                labels = torch.argmax(labels.squeeze(), dim=1)
+                val_loss += loss.item()
+                total += labels.size(0)
+                correct += (predicted == labels).sum().item()
+
+        avg_val_loss = val_loss / len(val_dataloader)
+        val_accuracy = correct / total
+        #print(f'Training Loss: {avg_train_loss:.4f}, Validation Loss: {avg_val_loss:.4f}')
 
         print(f'Epoch [{epoch + 1}/{num_epochs}], '
                 f'Training Loss: {avg_train_loss:.4f}, Training Accuracy: {train_accuracy:.2%}, '
