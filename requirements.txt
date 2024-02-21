@@ -1,0 +1,6 @@
+torch
+pandas
+torchvision
+tqdm
+scikit-learn==1.4.0
+matplotlib
