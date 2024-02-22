@@ -45,10 +45,10 @@ class ImageDataset( Dataset ):
         if self.transform is not None:
             img = self.transform( img )
         target = torch.tensor(target)
-        # Convert integer label to one-hot encoding
-        target_onehot = self.onehot_encoder.transform([[target]])[0]
-        return img/255 , torch.tensor(target_onehot, dtype=torch.float32)
-        # return img / 255, target
+        # # Convert integer label to one-hot encoding
+        # target_onehot = self.onehot_encoder.transform([[target]])[0]
+        # return img/255 , torch.tensor(target_onehot, dtype=torch.float32)
+        return img / 255, target
 
 def collate_fn( batch ):
     imgs, targets = [], []
@@ -159,17 +159,21 @@ if __name__ == "__main__":
             #predicted = outputs
 
             # encoder = OneHotEncoder(categories='auto', sparse_output=False)
-            # predicted = encoder.fit_transform(predicted.detach().cpu().numpy().reshape(-1, 1))
-            # predicted = torch.tensor(predicted, dtype=torch.float32, device=device)
-            #predicted = predicted.to(device).to_dense()
+            # labels = encoder.fit_transform(predicted.detach().cpu().numpy().reshape(-1, 1))
+            # labels = torch.tensor(labels, dtype=torch.float32, device=device)
+            # labels = labels.to(device).to_dense()
 
+            # Perform one-hot encoding using PyTorch
+            labels = F.one_hot(labels, num_classes=101).float()
+
+            # print("output:", outputs, " the size of output is: ", outputs.shape, "data type: ", outputs.dtype)
             # print("predict:", predicted, " the size of predictoion is: ", predicted.shape, "data type: ", predicted.dtype, "\n",)
             # print("label:", labels, " the size of label is: ", labels.shape, "data type: ", labels.dtype)
             # os.abort()
 
-            labels = torch.argmax(labels.squeeze(), dim=1)
-
             loss = criterion(outputs, labels)
+
+            labels = torch.argmax(labels.squeeze(), dim=1)
             loss.backward()
             optimizer.step()
             train_loss += loss.item()
@@ -187,15 +191,15 @@ if __name__ == "__main__":
         with torch.no_grad():
             for inputs, labels in val_dataloader:
                 inputs, labels = inputs.to(device), labels.to(device)
-                # labels = torch.argmax(labels.squeeze(), dim=1)
                 outputs = model(inputs)
                 _, predicted = torch.max(outputs.data, 1)
-                # predicted = outputs
+
+                total += labels.size(0)
+                # labels = torch.argmax(labels.squeeze(), dim=1)
                 loss = criterion(outputs, labels)
 
-                labels = torch.argmax(labels.squeeze(), dim=1)
                 val_loss += loss.item()
-                total += labels.size(0)
+
                 correct += (predicted == labels).sum().item()
 
         avg_val_loss = val_loss / len(val_dataloader)
